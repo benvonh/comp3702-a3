@@ -62,17 +62,6 @@ class Solver:
         #
         pass
 
-    def vi_finalise(self):
-        """
-        Perform any operations required to finalise Value Iteration (e.g. extract and store optimal policy).
-        """
-        #
-        # TODO: (Optional) Implement any finalisation for Value Iteration here if required.
-        #
-        # In order to ensure compatibility with tester, you should avoid adding additional arguments to this function.
-        #
-        pass
-
     def vi_plan_offline(self):
         """
         Plan using Value Iteration.
@@ -81,7 +70,6 @@ class Solver:
         self.vi_initialise()
         while not self.vi_is_converged():
             self.vi_iteration()
-        self.vi_finalise()
 
     def vi_get_state_value(self, state: State):
         """
@@ -148,17 +136,6 @@ class Solver:
         #
         pass
 
-    def pi_finalise(self):
-        """
-        Perform any operations required to finalise Policy Iteration (e.g. converting policy to dict).
-        """
-        #
-        # TODO: (Optional) Implement any finalisation for Policy Iteration here if required.
-        #
-        # In order to ensure compatibility with tester, you should avoid adding additional arguments to this function.
-        #
-        pass
-
     def pi_plan_offline(self):
         """
         Plan using Policy Iteration.
@@ -167,7 +144,6 @@ class Solver:
         self.pi_initialise()
         while not self.pi_is_converged():
             self.pi_iteration()
-        self.pi_finalise()
 
     def pi_select_action(self, state: State):
         """

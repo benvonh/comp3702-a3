@@ -1,9 +1,10 @@
-rm ../a1-support/constants.py ../a1-support/environment.py ../a1-support/play.py ../a1-support/state.py ../a1-support/tester.py ../a1-support/README.md
-rm -r ../a1-support/testcases
-cp ./constants.py ../a1-support/constants.py
-cp ./environment.py ../a1-support/environment.py
-cp ./play.py ../a1-support/play.py
-cp ./state.py ../a1-support/state.py
-cp ./tester.py ../a1-support/tester.py
-cp ./README.md  ../a1-support/README.md
-cp -r ./testcases ../a1-support
+rm ../a2-support/constants.py ../a2-support/environment.py ../a2-support/play.py ../a2-support/state.py ../a2-support/tester.py ../a2-support/README.md
+rm -r ../a2-support/testcases ../a2-support/control
+cp ./constants.py ../a2-support/constants.py
+cp ./environment.py ../a2-support/environment.py
+cp ./play.py ../a2-support/play.py
+cp ./state.py ../a2-support/state.py
+cp ./tester.py ../a2-support/tester.py
+cp ./README.md  ../a2-support/README.md
+cp -r ./testcases ../a2-support
+cp -r ./control ../a2-support

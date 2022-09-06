@@ -14,6 +14,8 @@ COMP3702 2022 Assignment 1 Support Code
 Last updated by njc 30/07/22
 """
 
+DISABLE_COLOUR = False      # Set to True to disable colour coding (useful if colours are not displaying correctly)
+
 
 class Environment:
     """
@@ -523,6 +525,7 @@ class Environment:
             robot_colour = red
             tgt_colour = green
             widget_colours = [yellow, magenta, cyan]
+            hazard_colour = blue
 
         buffer = [[' ' for _ in range((self.n_cols * RENDER_CELL_TOP_WIDTH) +
                                       ((self.n_cols + 1) * RENDER_CELL_SIDE_WIDTH))]
@@ -617,6 +620,19 @@ class Environment:
                     for x_offset in range(RENDER_CELL_TOP_WIDTH):
                         buffer[y + 3][x + x_offset] = 'X'
 
+        # draw hazards
+        for i in range(self.n_rows):
+            for j in range(self.n_cols):
+                if self.hazard_map[i][j]:
+                    # draw a hazard here
+                    # draw in top half of cell, horizontally centered
+                    y = i * RENDER_CELL_DEPTH + (RENDER_CELL_SIDE_WIDTH if j % 2 == 1 else 0) + RENDER_CELL_SIDE_WIDTH
+                    x = (j * RENDER_CELL_TOP_WIDTH) + ((j + 1) * RENDER_CELL_SIDE_WIDTH) + (
+                                RENDER_CELL_TOP_WIDTH // 2)
+                    buffer[y][x - 1] = '!'
+                    buffer[y][x] = '!'
+                    buffer[y][x + 1] = '!'
+
         # draw targets
         for tgt in self.target_list:
             ti, tj = tgt
@@ -678,27 +694,41 @@ class Environment:
             for i, char in enumerate(row):
                 if char in ['t', 'g']:
                     # target
-                    line += Colours.tgt_colour
+                    if not DISABLE_COLOUR:
+                        line += Colours.tgt_colour
                 if char == '(':
                     # widget start
                     next_char = row[i+1]
                     w_idx = string.ascii_lowercase.index(next_char.lower()) % self.n_widgets
-                    line += Colours.widget_colours[w_idx]
+                    if not DISABLE_COLOUR:
+                        line += Colours.widget_colours[w_idx]
                 if char == 'R' or char == '*':
                     # part of robot
-                    line += Colours.robot_colour
+                    if not DISABLE_COLOUR:
+                        line += Colours.robot_colour
+                if char == '!':
+                    # hazard
+                    if not DISABLE_COLOUR:
+                        line += Colours.hazard_colour
 
                 line += char
 
                 if char in ['t', 'g']:
                     # end of target
-                    line += Colours.reset
+                    if not DISABLE_COLOUR:
+                        line += Colours.reset
                 if char == ')':
                     # end of widget
-                    line += Colours.reset
+                    if not DISABLE_COLOUR:
+                        line += Colours.reset
                 if char == 'R' or char == '*':
                     # end of part of robot
-                    line += Colours.reset
+                    if not DISABLE_COLOUR:
+                        line += Colours.reset
+                if char == '!':
+                    # end of hazard
+                    if not DISABLE_COLOUR:
+                        line += Colours.reset
             print(line)
         print('\n')
 

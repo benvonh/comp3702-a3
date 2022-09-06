@@ -71,8 +71,6 @@ ONLINE_REWARD_SCALING = 1.3
 ONLINE_TIMING_SCALING = 2.0
 
 
-
-
 class TimeOutException(Exception):
     pass
 
@@ -252,21 +250,6 @@ def run_test_mp(filename_i_vis):
 
                     iterations += 1
 
-                # call finalise method
-                try:
-                    solver.vi_finalise()
-                except BaseException as e:
-                    msg1 = f'/!\\ Program crashed in solver.vi_finalise() on testcase {i}'
-                    msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                    if int(sys.version.split('.')[1]) <= 9:
-                        err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                    else:
-                        err = ''.join(traceback.format_exception(e))
-                    test_result = {"score": 0,
-                                   "max_score": POINTS_PER_TESTCASE,
-                                   "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                    return test_result, None
-
                 # check for convergence
                 for vs in val_states:
                     try:
@@ -344,21 +327,6 @@ def run_test_mp(filename_i_vis):
                         return test_result, None
 
                     iterations += 1
-
-                # call finalise method
-                try:
-                    solver.pi_finalise()
-                except BaseException as e:
-                    msg1 = f'/!\\ Program crashed in solver.pi_finalise() on testcase {i}'
-                    msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                    if int(sys.version.split('.')[1]) <= 9:
-                        err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                    else:
-                        err = ''.join(traceback.format_exception(e))
-                    test_result = {"score": 0,
-                                   "max_score": POINTS_PER_TESTCASE,
-                                   "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                    return test_result, None
 
                 # check for convergence
                 for vs in val_states:

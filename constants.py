@@ -35,7 +35,7 @@ SPIN_LEFT = 2
 SPIN_RIGHT = 3
 ROBOT_ACTIONS = [FORWARD, REVERSE, SPIN_LEFT, SPIN_RIGHT]
 # total_cost = base_cost + push_cost if robot is pushing or pulling a widget, else total_cost = base_cost
-ACTION_BASE_COST = {FORWARD: 1.0, REVERSE: 1.0, SPIN_LEFT: 0.1, SPIN_RIGHT: 0.1}
+ACTION_BASE_COST = {FORWARD: 1.0, REVERSE: 1.0, SPIN_LEFT: 0.1, SPIN_RIGHT: 0.11}
 ACTION_PUSH_COST = {FORWARD: 0.8, REVERSE: 0.5, SPIN_LEFT: 0.0, SPIN_RIGHT: 0.0}
 
 # === Widget Types =====================================================================================================

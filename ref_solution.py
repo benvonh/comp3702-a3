@@ -64,14 +64,20 @@ class Solver:
         self.r1_array = None
 
         # monte-carlo tree search
-        self.wrapped_states = None
-        self.q_sa = None
-        self.n_s = None
-        self.n_sa = None
-        self.VISITS_PER_SIM = 1
-        self.MAX_ROLLOUT_DEPTH = 50
+        if environment.solve_type == 'mcts':
+            self.wrapped_states = {}
+            self.q_sa = {}
+            self.n_s = {}
+            self.n_sa = {}
+        else:
+            self.wrapped_states = None
+            self.q_sa = None
+            self.n_s = None
+            self.n_sa = None
+        self.VISITS_PER_SIM = 1     # was 1
+        self.MAX_ROLLOUT_DEPTH = 50    # was 50
         self.TRIALS_PER_ROLLOUT = 1
-        self.EXP_BIAS = 1.4
+        self.EXP_BIAS = 1.4 * 5000
 
     def get_reachable_states(self):
         # build a list of reachable states
@@ -141,12 +147,6 @@ class Solver:
         # store max delta
         self.vi_max_delta = max_delta
 
-    def vi_finalise(self):
-        """
-        Perform any operations required to finalise Value Iteration (e.g. extract and store optimal policy).
-        """
-        pass
-
     def vi_plan_offline(self):
         """
         Plan using Value Iteration.
@@ -155,7 +155,6 @@ class Solver:
         self.vi_initialise()
         while not self.vi_is_converged():
             self.vi_iteration()
-        self.vi_finalise()
 
     def vi_get_state_value(self, state: State):
         """
@@ -192,7 +191,7 @@ class Solver:
         self.action_indices = {a: i for i, a in enumerate(ROBOT_ACTIONS)}
 
         # initialise policy to always move forward
-        self.pi_policy_array = np.ones([len(self.reachable_states)]) * self.action_indices[FORWARD]
+        self.pi_policy_array = np.ones([len(self.reachable_states)], dtype=np.int64) * self.action_indices[FORWARD]
 
         # build T array
         self.t_array = np.zeros([self.n_actions, self.n_states, self.n_states])
@@ -226,6 +225,7 @@ class Solver:
         Perform a single iteration of Policy Iteration (i.e. perform one step of policy evaluation and one step of
         policy improvement).
         """
+
         # ===== policy evaluation =====
         # use numpy 'fancy indexing'
         r1_pi = self.r1_array[self.pi_policy_array, self.state_numbers]
@@ -247,14 +247,6 @@ class Solver:
             self.pi_converged = True
         self.pi_policy_array = new_policy
 
-    def pi_finalise(self):
-        """
-        Perform any operations required to finalise Policy Iteration (e.g. converting policy to dict).
-        """
-        self.pi_policy = {}  # mapping from state -> action
-        for s in self.reachable_states:
-            self.pi_policy[s] = ROBOT_ACTIONS[self.pi_policy_array[self.state_indices[s]]]
-
     def pi_plan_offline(self):
         """
         Plan using Policy Iteration.
@@ -263,7 +255,6 @@ class Solver:
         self.pi_initialise()
         while not self.pi_is_converged():
             self.pi_iteration()
-        self.pi_finalise()
 
     def pi_select_action(self, state: State):
         """
@@ -271,7 +262,7 @@ class Solver:
         :param state: current state
         :return: optimal action for the given state (element of ROBOT_ACTIONS)
         """
-        return self.pi_policy.get(state, FORWARD)
+        return ROBOT_ACTIONS[self.pi_policy_array[self.state_indices[state]]]
 
     # === Monte Carlo Tree Search ======================================================================================
 
@@ -279,10 +270,11 @@ class Solver:
         """
         Initialise any variables required before the start of Monte-Carlo Tree Search.
         """
-        self.q_sa = {}      # (State, action) --> float
-        self.n_s = {}       # State --> int
-        self.n_sa = {}      # (State, action) --> int
-        self.wrapped_states = {}     # State --> StateWrapper
+        # self.q_sa = {}      # (State, action) --> float
+        # self.n_s = {}       # State --> int
+        # self.n_sa = {}      # (State, action) --> int
+        # self.wrapped_states = {}     # State --> StateWrapper
+        pass
 
     def mcts_simulate(self, state: State):
         """
@@ -341,11 +333,11 @@ class Solver:
                 action = random.choice(unvisited)
             else:
                 # otherwise, choose action with best U value
-                best_u = -np.inf
+                best_u = -float('inf')
                 best_a = None
                 for a in ROBOT_ACTIONS:
-                    u = self.q_sa[(state, a)] + \
-                        (self.EXP_BIAS * np.sqrt(np.log(self.n_s[state]) / self.n_sa[(state, a)]))
+                    u = self.q_sa.get((state, a), 0.0) + \
+                        (self.EXP_BIAS * np.sqrt(np.log(self.n_s.get(state, 0)) / self.n_sa.get((state, a), 1)))
                     if u > best_u:
                         best_u = u
                         best_a = a
@@ -413,13 +405,16 @@ class Solver:
         :param state: current state
         :return: approximately optimal action to perform for the given state (element of ROBOT_ACTIONS)
         """
-        #
-        # TODO: Implement code to select an action based on stored Q-values. This is called only at the end of online
-        #  planning.
-        #
-        # In order to ensure compatibility with tester, you should avoid adding additional arguments to this function.
-        #
-        pass
+        best_q = -np.inf
+        best_a = None
+        for a in ROBOT_ACTIONS:
+            if (state, a) in self.q_sa and self.q_sa[(state, a)] > best_q:
+                best_q = self.q_sa[(state, a)]
+                best_a = a
+        if best_a is not None:
+            return best_a
+        else:
+            return FORWARD
 
     def mcts_plan_online(self, state: State):
         """

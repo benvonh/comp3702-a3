@@ -19,13 +19,13 @@ vi
 # epsilon factor ==============
 0.01
 # iterations target ===========
-100
+172
 # offline time target =========
-30.0
+45.0
 # online time target ==========
 0.1
 # reward target ===============
--19.0
+-19.07
 # episode seed ================
 1917
 # hex grid data ===============
