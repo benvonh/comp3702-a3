@@ -52,23 +52,15 @@ ACTION_READABLE = {FORWARD: 'Forward', REVERSE: 'Reverse', SPIN_LEFT: 'Spin Left
 POINTS_PER_TESTCASE = 6.0
 MINIMUM_MARK_INCREMENT = 0.1
 
-# === offline scoring params ===
-OFFLINE_COMPLETION_POINTS = 1.0
-OFFLINE_REWARD_POINTS = 2.0
-OFFLINE_ITERATIONS_POINTS = 2.0
-OFFLINE_TIMING_POINTS = 1.0
+# === scoring params ===
+COMPLETION_POINTS = 1.0
+REWARD_POINTS = 2.0
+ITERATIONS_POINTS = 2.0
+TIMING_POINTS = 1.0
 
-OFFLINE_REWARD_SCALING = 1.3
-OFFLINE_ITERATIONS_SCALING = 1.3
-OFFLINE_TIMING_SCALING = 2.0
-
-# === online scoring params ===
-ONLINE_COMPLETION_POINTS = 1.0
-ONLINE_REWARD_POINTS = 4.0
-ONLINE_TIMING_POINTS = 1.0
-
-ONLINE_REWARD_SCALING = 1.3
-ONLINE_TIMING_SCALING = 2.0
+REWARD_SCALING = 1.3
+ITERATIONS_SCALING = 1.3
+TIMING_SCALING = 2.0
 
 
 class TimeOutException(Exception):
@@ -128,8 +120,7 @@ def run_test_mp(filename_i_vis):
     msg0 = f'=== Testcase {i} ============================================================'
 
     try:
-        # from solution import Solver
-        from ref_solution import Solver
+        from solution import Solver
     except ModuleNotFoundError:
         msg1 = "/!\\ There was an error importing your Solver module. Please ensure:\n" \
                "    * You have uploaded the individual files you've modified (e.g. solution.py, etc) and not the " \
@@ -182,25 +173,45 @@ def run_test_mp(filename_i_vis):
                        "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
         return test_result, None
 
-    # plan offline
-    if control_env.solve_type == 'vi' or control_env.solve_type == 'pi':
-        # construct validation set
-        val_states = []
-        for i in range(VALIDATION_SET_SIZE):
-            temp_state = control_env.get_init_state()
-            for j in range(VALIDATION_SET_LOOKAHEAD):
-                random.seed(stable_hash((i, j)))
-                temp_action = random.choice(ROBOT_ACTIONS)
-                _, temp_state = control_env.perform_action(temp_state, temp_action)
-            val_states.append(temp_state)
+    # === plan offline =================================================================================================
+    # construct validation set
+    val_states = []
+    for i in range(VALIDATION_SET_SIZE):
+        temp_state = control_env.get_init_state()
+        for j in range(VALIDATION_SET_LOOKAHEAD):
+            random.seed(stable_hash((i, j)))
+            temp_action = random.choice(ROBOT_ACTIONS)
+            _, temp_state = control_env.perform_action(temp_state, temp_action)
+        val_states.append(temp_state)
 
-        t0 = time.time()
-        try:
-            if control_env.solve_type == 'vi':
+    t0 = time.time()
+    try:
+        if control_env.solve_type == 'vi':
+            try:
+                solver.vi_initialise()
+            except BaseException as e:
+                msg1 = f'/!\\ Program crashed in solver.vi_initialise() on testcase {i}.'
+                msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+                if int(sys.version.split('.')[1]) <= 9:
+                    err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+                else:
+                    err = ''.join(traceback.format_exception(e))
+                test_result = {"score": 0,
+                               "max_score": POINTS_PER_TESTCASE,
+                               "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                return test_result, None
+
+            iterations = 0
+            vs_values = {vs: 0.0 for vs in val_states}
+            while not solver.vi_is_converged():
+                # read values for states in validation set for this iteration
                 try:
-                    solver.vi_initialise()
+                    for vs in val_states:
+                        vs_values[vs] = solver.vi_get_state_value(vs)
                 except BaseException as e:
-                    msg1 = f'/!\\ Program crashed in solver.vi_initialise() on testcase {i}.'
+                    msg1 = f'/!\\ Program crashed in solver.vi_get_state_values() on testcase {i}. Make sure ' \
+                           f'your solver.vi_get_state_values() method returns 0 for states which have not had ' \
+                           f'V(s) computed.'
                     msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
                     if int(sys.version.split('.')[1]) <= 9:
                         err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
@@ -211,74 +222,11 @@ def run_test_mp(filename_i_vis):
                                    "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
                     return test_result, None
 
-                iterations = 0
-                vs_values = {vs: 0.0 for vs in val_states}
-                while not solver.vi_is_converged():
-                    # read values for states in validation set for this iteration
-                    try:
-                        for vs in val_states:
-                            vs_values[vs] = solver.vi_get_state_value(vs)
-                    except BaseException as e:
-                        msg1 = f'/!\\ Program crashed in solver.vi_get_state_values() on testcase {i}. Make sure ' \
-                               f'your solver.vi_get_state_values() method returns 0 for states which have not had ' \
-                               f'V(s) computed.'
-                        msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                        if int(sys.version.split('.')[1]) <= 9:
-                            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                        else:
-                            err = ''.join(traceback.format_exception(e))
-                        test_result = {"score": 0,
-                                       "max_score": POINTS_PER_TESTCASE,
-                                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                        return test_result, None
-
-                    # run an iteration
-                    try:
-                        solver.vi_iteration()
-                    except BaseException as e:
-                        msg1 = f'/!\\ Program crashed in solver.vi_iteration() on testcase {i}'
-                        msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                        if int(sys.version.split('.')[1]) <= 9:
-                            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                        else:
-                            err = ''.join(traceback.format_exception(e))
-                        test_result = {"score": 0,
-                                       "max_score": POINTS_PER_TESTCASE,
-                                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                        return test_result, None
-
-                    iterations += 1
-
-                # check for convergence
-                for vs in val_states:
-                    try:
-                        if abs(vs_values[vs] - solver.vi_get_state_value(vs)) > (control_env.epsilon * 1.1):
-                            msg1 = '/!\\ Your value iteration terminated before convergence is reached. Make sure ' \
-                                   'that your solver.vi_is_converged() method is working as intended.'
-                            msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                            test_result = {"score": 0,
-                                           "max_score": POINTS_PER_TESTCASE,
-                                           "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
-                            return test_result, None
-                    except BaseException as e:
-                        msg1 = f'/!\\ Program crashed in solver.vi_get_state_values() on testcase {i}. Make sure ' \
-                               f'your solver.vi_get_state_values() method returns 0 for states which have not had ' \
-                               f'V(s) computed.'
-                        msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                        if int(sys.version.split('.')[1]) <= 9:
-                            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                        else:
-                            err = ''.join(traceback.format_exception(e))
-                        test_result = {"score": 0,
-                                       "max_score": POINTS_PER_TESTCASE,
-                                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                        return test_result, None
-                # convergence check passed
-            else:
+                # run an iteration
                 try:
-                    solver.pi_initialise()
+                    solver.vi_iteration()
                 except BaseException as e:
-                    msg1 = f'/!\\ Program crashed in solver.pi_initialise() on testcase {i}.'
+                    msg1 = f'/!\\ Program crashed in solver.vi_iteration() on testcase {i}'
                     msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
                     if int(sys.version.split('.')[1]) <= 9:
                         err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
@@ -289,94 +237,133 @@ def run_test_mp(filename_i_vis):
                                    "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
                     return test_result, None
 
-                iterations = 0
-                vs_policy = {vs: FORWARD for vs in val_states}
-                while not solver.pi_is_converged():
-                    # read values for states in validation set for this iteration
-                    try:
-                        for vs in val_states:
-                            vs_policy[vs] = solver.pi_select_action(vs)
-                    except BaseException as e:
-                        msg1 = f'/!\\ Program crashed in solver.pi_select_action() on testcase {i}. Make sure ' \
-                               f'your solver.pi_select_action() method returns FORWARD for states which have not had ' \
-                               f'pi(s) computed.'
+                iterations += 1
+
+            # check for convergence
+            for vs in val_states:
+                try:
+                    if abs(vs_values[vs] - solver.vi_get_state_value(vs)) > (control_env.epsilon * 1.1):
+                        msg1 = '/!\\ Your value iteration terminated before convergence is reached. Make sure ' \
+                               'that your solver.vi_is_converged() method is working as intended.'
                         msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                        if int(sys.version.split('.')[1]) <= 9:
-                            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                        else:
-                            err = ''.join(traceback.format_exception(e))
                         test_result = {"score": 0,
                                        "max_score": POINTS_PER_TESTCASE,
-                                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                                       "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
                         return test_result, None
+                except BaseException as e:
+                    msg1 = f'/!\\ Program crashed in solver.vi_get_state_values() on testcase {i}. Make sure ' \
+                           f'your solver.vi_get_state_values() method returns 0 for states which have not had ' \
+                           f'V(s) computed.'
+                    msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+                    if int(sys.version.split('.')[1]) <= 9:
+                        err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+                    else:
+                        err = ''.join(traceback.format_exception(e))
+                    test_result = {"score": 0,
+                                   "max_score": POINTS_PER_TESTCASE,
+                                   "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                    return test_result, None
+            # convergence check passed
+        else:
+            try:
+                solver.pi_initialise()
+            except BaseException as e:
+                msg1 = f'/!\\ Program crashed in solver.pi_initialise() on testcase {i}.'
+                msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+                if int(sys.version.split('.')[1]) <= 9:
+                    err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+                else:
+                    err = ''.join(traceback.format_exception(e))
+                test_result = {"score": 0,
+                               "max_score": POINTS_PER_TESTCASE,
+                               "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                return test_result, None
 
-                    # run an iteration
-                    try:
-                        solver.pi_iteration()
-                    except BaseException as e:
-                        msg1 = f'/!\\ Program crashed in solver.pi_iteration() on testcase {i}'
+            iterations = 0
+            vs_policy = {vs: FORWARD for vs in val_states}
+            while not solver.pi_is_converged():
+                # read values for states in validation set for this iteration
+                try:
+                    for vs in val_states:
+                        vs_policy[vs] = solver.pi_select_action(vs)
+                except BaseException as e:
+                    msg1 = f'/!\\ Program crashed in solver.pi_select_action() on testcase {i}. Make sure ' \
+                           f'your solver.pi_select_action() method returns FORWARD for states which have not had ' \
+                           f'pi(s) computed.'
+                    msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+                    if int(sys.version.split('.')[1]) <= 9:
+                        err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+                    else:
+                        err = ''.join(traceback.format_exception(e))
+                    test_result = {"score": 0,
+                                   "max_score": POINTS_PER_TESTCASE,
+                                   "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                    return test_result, None
+
+                # run an iteration
+                try:
+                    solver.pi_iteration()
+                except BaseException as e:
+                    msg1 = f'/!\\ Program crashed in solver.pi_iteration() on testcase {i}'
+                    msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+                    if int(sys.version.split('.')[1]) <= 9:
+                        err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+                    else:
+                        err = ''.join(traceback.format_exception(e))
+                    test_result = {"score": 0,
+                                   "max_score": POINTS_PER_TESTCASE,
+                                   "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                    return test_result, None
+
+                iterations += 1
+
+            # check for convergence
+            for vs in val_states:
+                try:
+                    if vs_policy[vs] != solver.pi_select_action(vs):
+                        msg1 = '/!\\ Your value iteration terminated before convergence is reached. Make sure ' \
+                               'that your solver.pi_is_converged() method is working as intended.'
                         msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                        if int(sys.version.split('.')[1]) <= 9:
-                            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                        else:
-                            err = ''.join(traceback.format_exception(e))
                         test_result = {"score": 0,
                                        "max_score": POINTS_PER_TESTCASE,
-                                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                                       "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
                         return test_result, None
+                except BaseException as e:
+                    msg1 = f'/!\\ Program crashed in solver.pi_select_action() on testcase {i}. Make sure ' \
+                           f'your solver.pi_select_action() method returns FORWARD for states which have not had ' \
+                           f'pi(s) computed.'
+                    msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+                    if int(sys.version.split('.')[1]) <= 9:
+                        err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+                    else:
+                        err = ''.join(traceback.format_exception(e))
+                    test_result = {"score": 0,
+                                   "max_score": POINTS_PER_TESTCASE,
+                                   "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+                    return test_result, None
+            # convergence check passed
+    except TimeOutException:
+        msg1 = f'/!\\ Program exceeded the maximum allowed time ({TIMEOUT // 60} minutes) in ' \
+               f'solver.{control_env.solve_type}_plan_offline() and was terminated.'
+        msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+        test_result = {"score": 0,
+                       "max_score": POINTS_PER_TESTCASE,
+                       "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
+        return test_result, None
+    except BaseException as e:
+        msg1 = f'/!\\ Program crashed in solver.{control_env.solve_type}_plan_offline() on testcase {i}'
+        msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
+        if int(sys.version.split('.')[1]) <= 9:
+            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+        else:
+            err = ''.join(traceback.format_exception(e))
+        test_result = {"score": 0,
+                       "max_score": POINTS_PER_TESTCASE,
+                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
+        return test_result, None
+    t_offline = time.time() - t0
 
-                    iterations += 1
-
-                # check for convergence
-                for vs in val_states:
-                    try:
-                        if vs_policy[vs] != solver.pi_select_action(vs):
-                            msg1 = '/!\\ Your value iteration terminated before convergence is reached. Make sure ' \
-                                   'that your solver.pi_is_converged() method is working as intended.'
-                            msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                            test_result = {"score": 0,
-                                           "max_score": POINTS_PER_TESTCASE,
-                                           "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
-                            return test_result, None
-                    except BaseException as e:
-                        msg1 = f'/!\\ Program crashed in solver.pi_select_action() on testcase {i}. Make sure ' \
-                               f'your solver.pi_select_action() method returns FORWARD for states which have not had ' \
-                               f'pi(s) computed.'
-                        msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                        if int(sys.version.split('.')[1]) <= 9:
-                            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                        else:
-                            err = ''.join(traceback.format_exception(e))
-                        test_result = {"score": 0,
-                                       "max_score": POINTS_PER_TESTCASE,
-                                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                        return test_result, None
-                # convergence check passed
-        except TimeOutException:
-            msg1 = f'/!\\ Program exceeded the maximum allowed time ({TIMEOUT // 60} minutes) in ' \
-                   f'solver.{control_env.solve_type}_plan_offline() and was terminated.'
-            msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-            test_result = {"score": 0,
-                           "max_score": POINTS_PER_TESTCASE,
-                           "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
-            return test_result, None
-        except BaseException as e:
-            msg1 = f'/!\\ Program crashed in solver.{control_env.solve_type}_plan_offline() on testcase {i}'
-            msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-            if int(sys.version.split('.')[1]) <= 9:
-                err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-            else:
-                err = ''.join(traceback.format_exception(e))
-            test_result = {"score": 0,
-                           "max_score": POINTS_PER_TESTCASE,
-                           "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-            return test_result, None
-        t_offline = time.time() - t0
-    else:
-        iterations = 0
-        t_offline = 0
-
-    # simulate episode
+    # === simulate episode =============================================================================================
     t_online_max = 0
     total_reward = 0
     persistent_state = control_env.get_init_state()
@@ -407,40 +394,11 @@ def run_test_mp(filename_i_vis):
                                    "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
                     return test_result, None
 
-            elif control_env.solve_type == 'pi':
+            else:   # control_env.solve_type == 'pi'
                 try:
                     action = solver.pi_select_action(persistent_state)
                 except BaseException as e:
-                    msg1 = f'/!\\ Program crashed in solver.vi_select_action() on testcase {i}.'
-                    msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                    if int(sys.version.split('.')[1]) <= 9:
-                        err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                    else:
-                        err = ''.join(traceback.format_exception(e))
-                    test_result = {"score": 0,
-                                   "max_score": POINTS_PER_TESTCASE,
-                                   "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                    return test_result, None
-            else:
-                t0 = time.time()
-                while time.time() - t0 < solver.environment.online_time_tgt:
-                    try:
-                        solver.mcts_simulate(persistent_state)
-                    except BaseException as e:
-                        msg1 = f'/!\\ Program crashed in solver.mcts_simulate() on testcase {i}.'
-                        msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
-                        if int(sys.version.split('.')[1]) <= 9:
-                            err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-                        else:
-                            err = ''.join(traceback.format_exception(e))
-                        test_result = {"score": 0,
-                                       "max_score": POINTS_PER_TESTCASE,
-                                       "output": msg0 + '\n' + msg1 + '\n' + err + '\n' + msg2 + '\n'}
-                        return test_result, None
-                try:
-                    action = solver.mcts_select_action(persistent_state)
-                except BaseException as e:
-                    msg1 = f'/!\\ Program crashed in solver.mcts_select_action() on testcase {i}.'
+                    msg1 = f'/!\\ Program crashed in solver.pi_select_action() on testcase {i}.'
                     msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
                     if int(sys.version.split('.')[1]) <= 9:
                         err = ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
@@ -457,7 +415,7 @@ def run_test_mp(filename_i_vis):
             if t_online > t_online_max:
                 t_online_max = t_online
         except TimeOutException:
-            m = control_env.solve_type + ("_plan_online" if control_env.solve_type == "mcts" else "_select_action()")
+            m = control_env.solve_type + "_select_action()"
             msg1 = f'/!\\ Program exceeded the maximum allowed time ({TIMEOUT // 60} minutes) in ' \
                    f'solver.{m} and was terminated.'
             msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
@@ -466,7 +424,7 @@ def run_test_mp(filename_i_vis):
                            "output": msg0 + '\n' + msg1 + '\n' + msg2 + '\n'}
             return test_result, None
         except BaseException as e:
-            m = control_env.solve_type + ("_plan_online" if control_env.solve_type == "mcts" else "_select_action()")
+            m = control_env.solve_type + "_select_action()"
             msg1 = f'/!\\ Program crashed in solver.{m} on testcase {i}'
             msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
             if int(sys.version.split('.')[1]) <= 9:
@@ -479,7 +437,7 @@ def run_test_mp(filename_i_vis):
             return test_result, None
 
         if action not in ROBOT_ACTIONS:
-            m = control_env.solve_type + ("_plan_online" if control_env.solve_type == "mcts" else "_select_action()")
+            m = control_env.solve_type + "_select_action()"
             msg1 = f'/!\\ Unrecognised action returned by {m}.'
             msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
             test_result = {"score": 0,
@@ -506,63 +464,37 @@ def run_test_mp(filename_i_vis):
             time.sleep(VISUALISE_TIME_PER_STEP)
 
     # assign scores based on iterations, time to solve, total reward
-    if control_env.solve_type == 'vi' or control_env.solve_type == 'pi':
-        completion_score = OFFLINE_COMPLETION_POINTS if control_env.is_solved(persistent_state) else 0.0
+    completion_score = COMPLETION_POINTS if control_env.is_solved(persistent_state) else 0.0
 
-        reward_score = compute_score(OFFLINE_REWARD_POINTS, OFFLINE_REWARD_SCALING,
-                                     -total_reward, -control_env.reward_tgt)
-        reward_score = round_to_increment(reward_score)
+    reward_score = compute_score(REWARD_POINTS, REWARD_SCALING,
+                                 -total_reward, -control_env.reward_tgt)
+    reward_score = round_to_increment(reward_score)
 
-        timing_score = compute_score(OFFLINE_TIMING_POINTS, OFFLINE_TIMING_SCALING,
-                                     t_offline, control_env.offline_time_tgt)
-        timing_score = round_to_increment(timing_score)
+    timing_score = compute_score(TIMING_POINTS, TIMING_SCALING,
+                                 t_offline, control_env.offline_time_tgt)
+    timing_score = round_to_increment(timing_score)
 
-        iterations_score = compute_score(OFFLINE_ITERATIONS_POINTS, OFFLINE_ITERATIONS_SCALING,
-                                         iterations, control_env.iterations_tgt)
-        iterations_score = round_to_increment(iterations_score)
+    iterations_score = compute_score(ITERATIONS_POINTS, ITERATIONS_SCALING,
+                                     iterations, control_env.iterations_tgt)
+    iterations_score = round_to_increment(iterations_score)
 
-        tc_total_score = completion_score + reward_score + timing_score + iterations_score
+    tc_total_score = completion_score + reward_score + timing_score + iterations_score
 
-        msg1 = f'Agent successfully reached the goal ' \
-               f'--> Score: {round(completion_score, 1)} / {OFFLINE_COMPLETION_POINTS}'
-        msg2 = f'Total Reward: {total_reward},    Target: {control_env.reward_tgt}  ' \
-               f'--> Score: {round(reward_score, 1)} / {OFFLINE_REWARD_POINTS}'
-        msg3 = f'Time Elapsed: {t_offline},    Target: {control_env.offline_time_tgt}  ' \
-               f'--> Score: {round(timing_score, 1)} / {OFFLINE_TIMING_POINTS}'
-        msg4 = f'Iterations Performed: {iterations},    Target: {control_env.iterations_tgt}  ' \
-               f'--> Score: {round(iterations_score, 1)} / {OFFLINE_ITERATIONS_POINTS}'
-        msg5 = f'\nTestcase total score: {tc_total_score} / {POINTS_PER_TESTCASE}'
-        test_result = {"score": tc_total_score,
-                       "max_score": POINTS_PER_TESTCASE,
-                       "output": (msg0 + '\n' + msg1 + '\n' + msg2 + '\n' + msg3 + '\n' + msg4 + '\n' +
-                                  msg5 + '\n')}
+    msg1 = f'Agent successfully reached the goal ' \
+           f'--> Score: {round(completion_score, 1)} / {COMPLETION_POINTS}'
+    msg2 = f'Total Reward: {total_reward},    Target: {control_env.reward_tgt}  ' \
+           f'--> Score: {round(reward_score, 1)} / {REWARD_POINTS}'
+    msg3 = f'Time Elapsed: {t_offline},    Target: {control_env.offline_time_tgt}  ' \
+           f'--> Score: {round(timing_score, 1)} / {TIMING_POINTS}'
+    msg4 = f'Iterations Performed: {iterations},    Target: {control_env.iterations_tgt}  ' \
+           f'--> Score: {round(iterations_score, 1)} / {ITERATIONS_POINTS}'
+    msg5 = f'\nTestcase total score: {tc_total_score} / {POINTS_PER_TESTCASE}'
+    test_result = {"score": tc_total_score,
+                   "max_score": POINTS_PER_TESTCASE,
+                   "output": (msg0 + '\n' + msg1 + '\n' + msg2 + '\n' + msg3 + '\n' + msg4 + '\n' +
+                              msg5 + '\n')}
 
-        return test_result, None
-    else:
-        completion_score = ONLINE_COMPLETION_POINTS if control_env.is_solved(persistent_state) else 0.0
-
-        reward_score = compute_score(ONLINE_REWARD_POINTS, ONLINE_REWARD_SCALING,
-                                     -total_reward, -control_env.reward_tgt)
-        reward_score = round_to_increment(reward_score)
-
-        timing_score = compute_score(ONLINE_TIMING_POINTS, ONLINE_TIMING_SCALING,
-                                     t_online_max, control_env.online_time_tgt)
-        timing_score = round_to_increment(timing_score)
-
-        tc_total_score = completion_score + reward_score + timing_score
-
-        msg1 = f'Agent successfully reached the goal ' \
-               f'--> Score: {round(completion_score, 1)} / {OFFLINE_COMPLETION_POINTS}'
-        msg2 = f'Total Reward: {total_reward},    Target: {control_env.reward_tgt}  ' \
-               f'--> Score: {round(reward_score, 1)} / {OFFLINE_REWARD_POINTS}'
-        msg3 = f'Time Elapsed: {t_offline},    Target: {control_env.offline_time_tgt}  ' \
-               f'--> Score: {round(timing_score, 1)} / {OFFLINE_TIMING_POINTS}'
-        msg5 = f'\nTestcase total score: {tc_total_score} / {POINTS_PER_TESTCASE}'
-        test_result = {"score": tc_total_score,
-                       "max_score": POINTS_PER_TESTCASE,
-                       "output": (msg0 + '\n' + msg1 + '\n' + msg2 + '\n' + msg3 + '\n' + msg5 + '\n')}
-
-        return test_result, None
+    return test_result, None
 
 
 def main(arglist):
@@ -611,7 +543,6 @@ def main(arglist):
             if leaderboard_result is not None:
                 leaderboard.append(leaderboard_result)
             total_score += test_result['score']
-            # print(test_result['output'])
     else:  # run in parallel otherwise
         from multiprocessing import Pool
         inputs = [(TC_PREFIX + str(i) + TC_SUFFIX, i, False) for i in tc_idx]
