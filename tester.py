@@ -134,8 +134,7 @@ def run_test_mp(filename_i_vis):
         msg1 = "/!\\ There was an error importing your Solver module. Please ensure:\n" \
                "    * You have uploaded the individual files you've modified (e.g. solution.py, etc) and not the " \
                "entire project directory\n" \
-               "    * You are not importing any packages which use a GUI (e.g. tkinter, turtle)\n" \
-               "    * You are not importing any packages which need to be separately installed (e.g. numpy)"
+               "    * You are not importing any packages which use a GUI (e.g. tkinter, turtle)"
         msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
         test_result = {"score": 0,
                        "max_score": POINTS_PER_TESTCASE,
