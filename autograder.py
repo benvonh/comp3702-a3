@@ -8,7 +8,7 @@ SUBMISSION_DIR = "/autograder/submission/"
 RESULTS_FILE = "/autograder/results/results.json"
 # TESTCASE_DIR = "testcases/"                 # for testing only
 # SUBMISSION_DIR = "submission/"              # for testing only
-# RESULTS_FILE = "scratch/results.json"       # for testing only
+# RESULTS_FILE = "results/results.json"       # for testing only
 
 
 def main(arglist):
@@ -34,8 +34,8 @@ def main(arglist):
     from tester import main as run_tester
 
     # run tester on both methods + all testcases
-    run_tester(['both', '1,2,3,4,5', '-l', RESULTS_FILE])
-    # run_tester(['both', '1,2,3', '-l', RESULTS_FILE])     # for testing only
+    run_tester(['1,2,3,4,5,6', '-l', RESULTS_FILE])
+    # run_tester(['1,2', '-l', RESULTS_FILE])     # for testing only
 
     # remove submission files from working directory
     for f in submission_files:

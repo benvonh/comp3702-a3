@@ -21,7 +21,7 @@ vi
 # iterations target ===========
 172
 # offline time target =========
-45.0
+60.0
 # online time target ==========
 0.1
 # reward target ===============
