@@ -19,7 +19,7 @@ pi
 # epsilon factor ==============
 0.001
 # iterations target ===========
-27
+23
 # offline time target =========
 200.0
 # online time target ==========

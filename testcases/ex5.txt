@@ -19,13 +19,13 @@ pi
 # epsilon factor ==============
 0.01
 # iterations target ===========
-22
+20
 # offline time target =========
 10.0
 # online time target ==========
 0.1
 # reward target ===============
--35.83
+-37.15
 # episode seed ================
 1312
 # hex grid data ===============

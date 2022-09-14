@@ -19,7 +19,7 @@ vi
 # epsilon factor ==============
 0.01
 # iterations target ===========
-278
+308
 # offline time target =========
 80.0
 # online time target ==========

@@ -445,14 +445,14 @@ class Solver:
 
         # drift CW, single move
         p = env.drift_cw_probs[action] * (1.0 - env.double_move_probs[action])
-        r_1, s1 = env.apply_dynamics(state, SPIN_CW)
+        r_1, s1 = env.apply_dynamics(state, SPIN_RIGHT)
         r_2, s1 = env.apply_dynamics(s1, action)
         r = min(r_1, r_2)
         outcomes.append((s1, r, p))
 
         # drift CCW, single move
         p = env.drift_ccw_probs[action] * (1.0 - env.double_move_probs[action])
-        r_1, s1 = env.apply_dynamics(state, SPIN_CCW)
+        r_1, s1 = env.apply_dynamics(state, SPIN_LEFT)
         r_2, s1 = env.apply_dynamics(s1, action)
         r = min(r_1, r_2)
         outcomes.append((s1, r, p))
@@ -465,7 +465,7 @@ class Solver:
 
         # drift CW, double move
         p = env.drift_cw_probs[action] * env.double_move_probs[action]
-        r_1, s1 = env.apply_dynamics(state, SPIN_CW)
+        r_1, s1 = env.apply_dynamics(state, SPIN_RIGHT)
         r_2, s1 = env.apply_dynamics(s1, action)
         r_3, s1 = env.apply_dynamics(s1, action)
         r = min(r_1, r_2, r_3)
@@ -473,7 +473,7 @@ class Solver:
 
         # drift CCW, double move
         p = env.drift_ccw_probs[action] * env.double_move_probs[action]
-        r_1, s1 = env.apply_dynamics(state, SPIN_CCW)
+        r_1, s1 = env.apply_dynamics(state, SPIN_LEFT)
         r_2, s1 = env.apply_dynamics(s1, action)
         r_3, s1 = env.apply_dynamics(s1, action)
         r = min(r_1, r_2, r_3)

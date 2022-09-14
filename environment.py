@@ -256,9 +256,9 @@ class Environment:
         # chance to drift CW or CCW (apply before selected action)
         r = random.random()
         if r < self.drift_cw_probs[action]:
-            movements.append(SPIN_CW)
+            movements.append(SPIN_RIGHT)
         elif r < self.drift_ccw_probs[action] + self.drift_cw_probs[action]:
-            movements.append(SPIN_CCW)
+            movements.append(SPIN_LEFT)
 
         # selected action
         movements.append(action)
