@@ -9,3 +9,4 @@ cp ./README.md  ../a2-support/README.md
 cp ./.gitignore ../a2-support/.gitignore
 cp -r ./testcases ../a2-support
 cp -r ./control ../a2-support
+cp ./ex9.txt ../a2-support/testcases/ex9.txt

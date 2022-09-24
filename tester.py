@@ -116,6 +116,8 @@ def run_test_mp(filename_i_vis):
     :param filename_i_vis: (filename, testcase index, visualise)
     :return: thread_id, test_result, leaderboard_result (None if not applicable)
     """
+    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
     filename, i, vis = filename_i_vis
     msg0 = f'=== Testcase {i} ============================================================'
 
@@ -176,10 +178,10 @@ def run_test_mp(filename_i_vis):
     # === plan offline =================================================================================================
     # construct validation set
     val_states = []
-    for i in range(VALIDATION_SET_SIZE):
+    for j in range(VALIDATION_SET_SIZE):
         temp_state = control_env.get_init_state()
-        for j in range(VALIDATION_SET_LOOKAHEAD):
-            random.seed(stable_hash((i, j)))
+        for k in range(VALIDATION_SET_LOOKAHEAD):
+            random.seed(stable_hash((j, k)))
             temp_action = random.choice(ROBOT_ACTIONS)
             _, temp_state = control_env.perform_action(temp_state, temp_action)
         val_states.append(temp_state)
@@ -321,7 +323,7 @@ def run_test_mp(filename_i_vis):
             for vs in val_states:
                 try:
                     if vs_policy[vs] != solver.pi_select_action(vs):
-                        msg1 = '/!\\ Your value iteration terminated before convergence is reached. Make sure ' \
+                        msg1 = '/!\\ Your policy iteration terminated before convergence is reached. Make sure ' \
                                'that your solver.pi_is_converged() method is working as intended.'
                         msg2 = f'\nTestcase total score: 0.0 / {POINTS_PER_TESTCASE}'
                         test_result = {"score": 0,
