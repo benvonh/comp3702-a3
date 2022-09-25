@@ -482,7 +482,7 @@ def run_test_mp(filename_i_vis):
 
     tc_total_score = completion_score + reward_score + timing_score + iterations_score
 
-    msg1 = f'Agent successfully reached the goal ' \
+    msg1 = f'Agent {"successfully reached" if completion_score > 0.0 else "failed to reach"} the goal ' \
            f'--> Score: {round(completion_score, 1)} / {COMPLETION_POINTS}'
     msg2 = f'Total Reward: {total_reward},    Target: {control_env.reward_tgt}  ' \
            f'--> Score: {round(reward_score, 1)} / {REWARD_POINTS}'
