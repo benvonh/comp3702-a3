@@ -8,7 +8,7 @@ solution.py
 
 This file is a template you should use to implement your solution.
 
-You should implement 
+You should implement code for each of the TODO sections below.
 
 COMP3702 2022 Assignment 3 Support Code
 
@@ -19,13 +19,13 @@ Last updated by njc 12/10/22
 class Solver:
 
     #
-    # TODO: Define any constants you require here
+    # TODO: (optional) Define any constants you require here.
     #
 
     def __init__(self, environment: Environment):
         self.environment = environment
         #
-        # TODO: Define any class instance variables you require (e.g. Q-value tables) here.
+        # TODO: (optional) Define any class instance variables you require (e.g. Q-value tables) here.
         #
         pass
 
@@ -78,7 +78,7 @@ class Solver:
     # === Helper Methods ===============================================================================================
     #
     #
-    # TODO: Add any additional methods here
+    # TODO: (optional) Add any additional methods here.
     #
     #
 
