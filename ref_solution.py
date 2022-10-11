@@ -64,7 +64,7 @@ class Solver:
         self.r1_array = None
 
         # monte-carlo tree search
-        if environment.solve_type == 'mcts':
+        if environment.agent_type == 'mcts':
             self.wrapped_states = {}
             self.q_sa = {}
             self.n_s = {}
@@ -112,7 +112,7 @@ class Solver:
         Check if Value Iteration has reached convergence.
         :return: True if converged, False otherwise
         """
-        return self.vi_max_delta < self.environment.epsilon
+        return self.vi_max_delta < self.environment.alpha
 
     def vi_iteration(self):
         """
@@ -424,7 +424,7 @@ class Solver:
         """
         # !!! In order to ensure compatibility with tester, you should not modify this method !!!
         t0 = time.time()
-        while time.time() - t0 < self.environment.online_time_tgt:
+        while time.time() - t0 < self.environment.training_time_tgt:
             self.mcts_simulate(state)
         return self.mcts_select_action(state)
 
@@ -439,43 +439,43 @@ class Solver:
         env = self.environment
 
         # no drift, single move
-        p = (1.0 - (env.drift_cw_probs[action] + env.drift_ccw_probs[action])) * (1.0 - env.double_move_probs[action])
-        r, s1 = env.apply_dynamics(state, action)
+        p = (1.0 - (env.__drift_cw_probs[action] + env.__drift_ccw_probs[action])) * (1.0 - env.__double_move_probs[action])
+        r, s1 = env.__apply_dynamics(state, action)
         outcomes.append((s1, r, p))
 
         # drift CW, single move
-        p = env.drift_cw_probs[action] * (1.0 - env.double_move_probs[action])
-        r_1, s1 = env.apply_dynamics(state, SPIN_RIGHT)
-        r_2, s1 = env.apply_dynamics(s1, action)
+        p = env.__drift_cw_probs[action] * (1.0 - env.__double_move_probs[action])
+        r_1, s1 = env.__apply_dynamics(state, SPIN_RIGHT)
+        r_2, s1 = env.__apply_dynamics(s1, action)
         r = min(r_1, r_2)
         outcomes.append((s1, r, p))
 
         # drift CCW, single move
-        p = env.drift_ccw_probs[action] * (1.0 - env.double_move_probs[action])
-        r_1, s1 = env.apply_dynamics(state, SPIN_LEFT)
-        r_2, s1 = env.apply_dynamics(s1, action)
+        p = env.__drift_ccw_probs[action] * (1.0 - env.__double_move_probs[action])
+        r_1, s1 = env.__apply_dynamics(state, SPIN_LEFT)
+        r_2, s1 = env.__apply_dynamics(s1, action)
         r = min(r_1, r_2)
         outcomes.append((s1, r, p))
 
         # no drift, double move
-        p = (1.0 - (env.drift_cw_probs[action] + env.drift_ccw_probs[action])) * env.double_move_probs[action]
-        r_1, s1 = env.apply_dynamics(state, action)
-        r_2, s1 = env.apply_dynamics(s1, action)
+        p = (1.0 - (env.__drift_cw_probs[action] + env.__drift_ccw_probs[action])) * env.__double_move_probs[action]
+        r_1, s1 = env.__apply_dynamics(state, action)
+        r_2, s1 = env.__apply_dynamics(s1, action)
         outcomes.append((s1, r, p))
 
         # drift CW, double move
-        p = env.drift_cw_probs[action] * env.double_move_probs[action]
-        r_1, s1 = env.apply_dynamics(state, SPIN_RIGHT)
-        r_2, s1 = env.apply_dynamics(s1, action)
-        r_3, s1 = env.apply_dynamics(s1, action)
+        p = env.__drift_cw_probs[action] * env.__double_move_probs[action]
+        r_1, s1 = env.__apply_dynamics(state, SPIN_RIGHT)
+        r_2, s1 = env.__apply_dynamics(s1, action)
+        r_3, s1 = env.__apply_dynamics(s1, action)
         r = min(r_1, r_2, r_3)
         outcomes.append((s1, r, p))
 
         # drift CCW, double move
-        p = env.drift_ccw_probs[action] * env.double_move_probs[action]
-        r_1, s1 = env.apply_dynamics(state, SPIN_LEFT)
-        r_2, s1 = env.apply_dynamics(s1, action)
-        r_3, s1 = env.apply_dynamics(s1, action)
+        p = env.__drift_ccw_probs[action] * env.__double_move_probs[action]
+        r_1, s1 = env.__apply_dynamics(state, SPIN_LEFT)
+        r_2, s1 = env.__apply_dynamics(s1, action)
+        r_3, s1 = env.__apply_dynamics(s1, action)
         r = min(r_1, r_2, r_3)
         outcomes.append((s1, r, p))
 
