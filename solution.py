@@ -16,7 +16,7 @@ Last updated by njc 12/10/22
 """
 
 
-class Solver:
+class RLAgent:
 
     #
     # TODO: (optional) Define any constants you require here.
