@@ -1,5 +1,7 @@
+from platform import win32_edition
 import sys
 import time
+import numpy as np
 from constants import *
 from environment import *
 from state import State
@@ -24,10 +26,12 @@ class RLAgent:
 
     def __init__(self, environment: Environment):
         self.environment = environment
-        #
-        # TODO: (optional) Define any class instance variables you require (e.g. Q-value tables) here.
-        #
-        pass
+        # Set current state
+        self.s = environment.get_init_state()
+        # Initialise q-table
+        self.qtable = { self.s : np.zeros(len(ROBOT_ACTIONS)) }
+        # Record start time
+        self.start = time.time()
 
     # === Q-learning ===================================================================================================
 
@@ -35,10 +39,21 @@ class RLAgent:
         """
         Train this RL agent via Q-Learning.
         """
-        #
-        # TODO: Implement your Q-learning training loop here.
-        #
-        pass
+        while self.win_condition():
+            # Update action to perform
+            action = np.argmax(self.qtable[self.s])
+            # Perform action from current state
+            cost, next_state = self.environment.perform_action(self.s, action)
+            # Add nex discovered
+            if next_state not in self.qtable:
+                self.qtable[next_state] = np.zeros(len(ROBOT_ACTIONS))
+            # Find max Q in resulting state
+            qmax = np.max(self.qtable[next_state])
+            # Compute Bellman equation
+            self.qtable[self.s][action] += \
+                self.environment.alpha * (cost + self.environment.gamma * qmax - self.qtable[self.s][action])
+            # Set next state
+            self.s = next_state
 
     def q_learn_select_action(self, state: State):
         """
@@ -46,11 +61,10 @@ class RLAgent:
         :param state: the current state
         :return: approximately optimal action for the given state
         """
-        #
-        # TODO: Implement code to return an approximately optimal action for the given state (based on your learned
-        #  Q-learning Q-values) here.
-        #
-        pass
+        if state not in self.qtable:
+            return 0
+
+        return np.argmax(self.qtable[state])
 
     # === SARSA ========================================================================================================
 
@@ -76,9 +90,8 @@ class RLAgent:
         pass
 
     # === Helper Methods ===============================================================================================
-    #
-    #
-    # TODO: (optional) Add any additional methods here.
-    #
-    #
-
+    def win_condition(self):
+        return not self.environment.is_solved(self.s) #or \
+            #(time.time() - self.start) < self.environment.training_time_tgt
+            # self.environment.get_total_reward() < self.environment.evaluation_reward_tgt and \
+            # self.environment.get_total_reward() < self.environment.training_reward_tgt and \
