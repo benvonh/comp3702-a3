@@ -1,4 +1,3 @@
-from platform import win32_edition
 import sys
 import time
 import numpy as np
@@ -20,9 +19,7 @@ Last updated by njc 12/10/22
 
 class RLAgent:
 
-    #
-    # TODO: (optional) Define any constants you require here.
-    #
+    EPISODE = 20000
 
     def __init__(self, environment: Environment):
         self.environment = environment
@@ -39,21 +36,23 @@ class RLAgent:
         """
         Train this RL agent via Q-Learning.
         """
-        while self.win_condition():
-            # Update action to perform
-            action = np.argmax(self.qtable[self.s])
-            # Perform action from current state
-            cost, next_state = self.environment.perform_action(self.s, action)
-            # Add nex discovered
-            if next_state not in self.qtable:
-                self.qtable[next_state] = np.zeros(len(ROBOT_ACTIONS))
-            # Find max Q in resulting state
-            qmax = np.max(self.qtable[next_state])
-            # Compute Bellman equation
-            self.qtable[self.s][action] += \
-                self.environment.alpha * (cost + self.environment.gamma * qmax - self.qtable[self.s][action])
-            # Set next state
-            self.s = next_state
+        for _ in range(self.EPISODE):
+            self.s = self.environment.get_init_state()
+            while not self.environment.is_solved(self.s):
+                # Update action to perform
+                action = np.argmax(self.qtable[self.s])
+                # Perform action from current state
+                cost, next_state = self.environment.perform_action(self.s, action)
+                # Add nex discovered
+                if next_state not in self.qtable:
+                    self.qtable[next_state] = np.zeros(len(ROBOT_ACTIONS))
+                # Find max Q in resulting state
+                qmax = np.max(self.qtable[next_state])
+                # Compute Bellman equation
+                self.qtable[self.s][action] += \
+                    self.environment.alpha * (cost + self.environment.gamma * qmax - self.qtable[self.s][action])
+                # Set next state
+                self.s = next_state
 
     def q_learn_select_action(self, state: State):
         """
@@ -62,7 +61,7 @@ class RLAgent:
         :return: approximately optimal action for the given state
         """
         if state not in self.qtable:
-            return 0
+            print('PROBLEM')
 
         return np.argmax(self.qtable[state])
 
@@ -72,10 +71,23 @@ class RLAgent:
         """
         Train this RL agent via SARSA.
         """
-        #
-        # TODO: Implement your SARSA training loop here.
-        #
-        pass
+        for _ in range(self.EPISODE):
+            self.s = self.environment.get_init_state()
+            while not self.environment.is_solved(self.s):
+                # Update action to perform
+                action = np.argmax(self.qtable[self.s])
+                # Perform action from current state
+                cost, next_state = self.environment.perform_action(self.s, action)
+                # Add nex discovered
+                if next_state not in self.qtable:
+                    self.qtable[next_state] = np.zeros(len(ROBOT_ACTIONS))
+                # Find max Q in resulting state
+                qmax = np.max(self.qtable[next_state])
+                # Compute Bellman equation
+                self.qtable[self.s][action] += \
+                    self.environment.alpha * (cost + self.environment.gamma * qmax - self.qtable[self.s][action])
+                # Set next state
+                self.s = next_state
 
     def sarsa_select_action(self, state: State):
         """
@@ -83,15 +95,9 @@ class RLAgent:
         :param state: the current state
         :return: approximately optimal action for the given state
         """
-        #
-        # TODO: Implement code to return an approximately optimal action for the given state (based on your learned
-        #  SARSA Q-values) here.
-        #
-        pass
+        if state not in self.qtable:
+            print('PROBLEM')
+
+        return np.argmax(self.qtable[state])
 
     # === Helper Methods ===============================================================================================
-    def win_condition(self):
-        return not self.environment.is_solved(self.s) #or \
-            #(time.time() - self.start) < self.environment.training_time_tgt
-            # self.environment.get_total_reward() < self.environment.evaluation_reward_tgt and \
-            # self.environment.get_total_reward() < self.environment.training_reward_tgt and \
