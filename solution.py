@@ -83,8 +83,7 @@ class RLAgent:
                 # Compute Bellman equation
                 self.qtable[self.s][action] += self.environment.alpha * \
                     (cost + self.environment.gamma * self.qtable[next_state][action_greedy] - \
-                        self.qtable[self.s][action])            if self.environment.get_total_reward() > self.environment.evaluation_reward_tgt:
-                break
+                        self.qtable[self.s][action])
                 # Set next state and action
                 self.s = next_state
                 action = action_greedy
