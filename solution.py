@@ -35,7 +35,7 @@ class RLAgent:
     def q_learn_train(self):
         """
         Train this RL agent via Q-Learning.
-        """
+        """           
         for _ in range(self.EPISODE):
             self.s = self.environment.get_init_state()
             while not self.environment.is_solved(self.s):
@@ -55,7 +55,7 @@ class RLAgent:
                 self.s = next_state
 
     def q_learn_select_action(self, state: State):
-        """
+        """--> Score: 0.0 / 2.5
         Select an action to perform based on the values learned from training via Q-learning.
         :param state: the current state
         :return: approximately optimal action for the given state
@@ -83,7 +83,8 @@ class RLAgent:
                 # Compute Bellman equation
                 self.qtable[self.s][action] += self.environment.alpha * \
                     (cost + self.environment.gamma * self.qtable[next_state][action_greedy] - \
-                        self.qtable[self.s][action])
+                        self.qtable[self.s][action])            if self.environment.get_total_reward() > self.environment.evaluation_reward_tgt:
+                break
                 # Set next state and action
                 self.s = next_state
                 action = action_greedy
