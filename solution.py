@@ -19,7 +19,7 @@ Last updated by njc 12/10/22
 
 class RLAgent:
 
-    EPISODE = 20000
+    EPISODE = 10000
 
     def __init__(self, environment: Environment):
         self.environment = environment
