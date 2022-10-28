@@ -60,9 +60,6 @@ class RLAgent:
         :param state: the current state
         :return: approximately optimal action for the given state
         """
-        if state not in self.qtable:
-            print('PROBLEM')
-
         return np.argmax(self.qtable[state])
 
     # === SARSA ========================================================================================================
@@ -73,21 +70,23 @@ class RLAgent:
         """
         for _ in range(self.EPISODE):
             self.s = self.environment.get_init_state()
+            # Update action to perform
+            action = np.argmax(self.qtable[self.s])
             while not self.environment.is_solved(self.s):
-                # Update action to perform
-                action = np.argmax(self.qtable[self.s])
                 # Perform action from current state
                 cost, next_state = self.environment.perform_action(self.s, action)
                 # Add nex discovered
                 if next_state not in self.qtable:
                     self.qtable[next_state] = np.zeros(len(ROBOT_ACTIONS))
-                # Find max Q in resulting state
-                qmax = np.max(self.qtable[next_state])
+                # Find epsilon-greedy policy
+                action_greedy = np.argmax(self.qtable[next_state])
                 # Compute Bellman equation
-                self.qtable[self.s][action] += \
-                    self.environment.alpha * (cost + self.environment.gamma * qmax - self.qtable[self.s][action])
-                # Set next state
+                self.qtable[self.s][action] += self.environment.alpha * \
+                    (cost + self.environment.gamma * self.qtable[next_state][action_greedy] - \
+                        self.qtable[self.s][action])
+                # Set next state and action
                 self.s = next_state
+                action = action_greedy
 
     def sarsa_select_action(self, state: State):
         """
@@ -95,9 +94,6 @@ class RLAgent:
         :param state: the current state
         :return: approximately optimal action for the given state
         """
-        if state not in self.qtable:
-            print('PROBLEM')
-
         return np.argmax(self.qtable[state])
 
     # === Helper Methods ===============================================================================================
